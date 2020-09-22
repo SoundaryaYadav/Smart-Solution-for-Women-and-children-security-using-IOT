@@ -1,0 +1,192 @@
+#define BLYNK_PRINT Serial
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+SimpleTimer timer;
+#define trigger D7 
+#define echo D8  
+int led=16; 
+int led1;
+int bzz1=D4;
+int cnt;  
+const int buttonPin = D5;
+static int d=0;
+static int cnt=0;
+const int maxdist=25;
+char ssid []="PROJECT";
+char pass[] = "1234567890";
+char auth[] = "sL4vsRNHPHjgcrvXqoqv2CPufgguAXhN";
+WiFiServer server(80);
+int dist;
+#include <SoftwareSerial.h>
+SoftwareSerial gsmSerial(D1,D2); //rx,tx  GSM D7,D8
+int buttonState = 0;
+
+void setup()
+{
+pinMode(buttonPin, INPUT_PULLUP);
+Serial.print(" WOMAN SAFETY DEVICE ACTIVATED ..!");
+gsmSerial.begin(9600);// GSM
+pinMode(trigger,OUTPUT);
+pinMode(echo,INPUT);
+pinMode(led,OUTPUT);
+pinMode(led1,OUTPUT);
+pinMode(bzz1,OUTPUT);
+digitalWrite(bzz1,LOW);
+digitalWrite(led,LOW);
+digitalWrite(led1,LOW);
+Serial.begin(115200);
+Serial.print("Connecting to ");
+Serial.println(ssid);
+Blynk.begin(auth, ssid, pass);
+timer.setInterval(2000, sendUptime);
+}
+
+void sendUptime()
+
+{
+
+dist=distance();
+Serial.print("Distance :\t");
+Serial.println(dist);
+Blynk.virtualWrite(V0, dist);
+
+if (dist<=5)
+{
+cnt++;
+Serial.print(" Number of Times Alert Detected:");
+Serial.println(cnt);
+Blynk.virtualWrite(V1, cnt );// no of times Alert Detected  
+delay(100);
+digitalWrite(led,LOW);
+digitalWrite(bzz1,LOW);
+
+}
+
+if (cnt==3)
+
+{
+Serial.print(" No. of Times Alert Msg Sent :");
+Serial.println(d);
+d++;
+
+for(int i=0;i<3;i++)
+{
+digitalWrite(bzz1,HIGH);
+digitalWrite(led,HIGH);
+//delay(500);
+gsmsend();
+delay(500);
+gsmsend1();
+delay(500);
+}
+ Blynk.virtualWrite(V2, d); // Number of times alert msg send
+// digitalWrite(led,HIGH);
+// digitalWrite(bzz1,HIGH);
+// delay (50);
+
+ digitalWrite(led,LOW);
+ digitalWrite(bzz1,LOW);
+ delay(50);
+ cnt=0; // count become zero;
+ delay(100);
+ }
+
+}
+
+void loop() 
+
+{
+
+Blynk.run();
+timer.run();
+buttonState = digitalRead(buttonPin);
+
+if (buttonState == LOW)
+{
+Serial.println("Button State ON");
+digitalWrite(bzz1,HIGH);
+digitalWrite(led,HIGH);
+//delay(500);
+gsmsend();
+delay(1000);
+gsmsend1();
+delay(500);
+
+ }
+digitalWrite(bzz1,LOW);
+digitalWrite(led,LOW);
+ }
+int distance()
+{
+int i,t;
+digitalWrite(trigger,LOW);
+delayMicroseconds(2);
+digitalWrite(trigger,HIGH);
+delayMicroseconds(10);
+digitalWrite(trigger,LOW);
+delayMicroseconds(2);
+t=pulseIn(echo,HIGH);
+i=0.034*t/2;
+return i;
+}
+
+
+void gsmsend()
+{
+  gsmSerial.println("ATEO"); 
+  delay(500);
+  gsmSerial.print("ATD7975252312;\r"); // attention daill call  function
+  delay(1000);
+  gsmSerial.println("AT+CMGF=1");// set cmgf=1 for text mode
+  delay(500);
+  gsmSerial.print("AT+CMGS="); // sending msg
+  delay(500);
+  gsmSerial.write(0x22);
+  gsmSerial.print("7975252312");//chnge your number here
+  gsmSerial.write(0x22);
+  gsmSerial.write(0x0D);
+  gsmSerial.write(0x0A);
+  delay(500);
+  Serial.print("Msg Sent");
+  gsmSerial.print("\nHelp Me I'm in Trouble:");
+  gsmSerial.print("\nMy Location @ :");
+  gsmSerial.print("\nhttps://www.google.com/maps/place/.9072339!4d77.565569");
+  gsmSerial.println("\nPerson Distance");
+  gsmSerial.print(dist);
+  gsmSerial.println("\nNO of Alert Msg Sent");
+  gsmSerial.println(d);
+  gsmSerial.print("\nThankyou");
+  delay(500);
+  gsmSerial.write(0x1a);
+  delay(1000);
+  }
+ 
+ 
+void gsmsend1()
+
+{
+ gsmSerial.println("ATEO"); 
+ delay(500);
+ gsmSerial.print("ATD9535980615;\r"); // attention daill call  function
+ delay(500);
+ gsmSerial.print("ATD9535980615;\r"); // attention daill call  function
+ delay(500);
+ gsmSerial.println("AT+CMGF=1");// set cmgf=1 for text mode
+ delay(500);
+ gsmSerial.print("AT+CMGS="); // sending msg
+ delay(500);
+ gsmSerial.write(0x22);
+ gsmSerial.print("9535980615");//chnge your number here
+ gsmSerial.write(0x22);
+ gsmSerial.write(0x0D);
+ gsmSerial.write(0x0A);
+ delay(500);
+ Serial.print("Msg Sent");
+ gsmSerial.print("\n Plz..!! Help Me I'm in Trouble:");
+ gsmSerial.print("\n My Location @ :");
+ gsmSerial.print("\nhttps://www.google.com/maps/place/.9072339!4d77.565569");
+ gsmSerial.print("\nThankyou");
+ delay(500);
+ gsmSerial.write(0x1a);
+ delay(1000);
+}
